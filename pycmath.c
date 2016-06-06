@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <math.h>
 
 /* A simple vector datatype.
    Essentially a bounded array, with the length information attached.
@@ -21,12 +22,11 @@ struct vector* new_vector(long n) {
 }
 
 
-
 /* Calculate the vector of primes <= n using the sieve of eristothonies */
 struct vector* make_primes_vector(long n) {
 
     /* maybe_prime is a vector of booleans, tracking whether it is possible for
-       a given index to be a prime, update as we sieve.
+       a given index to be a prime, updated as we sieve.
     */
     struct vector* maybe_prime = new_vector(n);
     for(long i = 0; i < maybe_prime->length; i++) {
@@ -61,6 +61,7 @@ struct vector* make_primes_vector(long n) {
     return primes;
 }
 
+
 /* Python methods for module. */
 
 static PyObject* pycmath_primes(PyObject* self, PyObject *args) {
@@ -82,9 +83,47 @@ static PyObject* pycmath_primes(PyObject* self, PyObject *args) {
     return primes;
 }
 
+/* Calcualte the continued fraction representation of a quadratic irrationality. 
+
+   The return value is a two-tuple (Int, List[Int]), with the first coordinate
+   the integer part of the result, and the list containing the coninued
+   fraction decomposition of the number.
+*/
+static PyObject* pycmath_coninued_fraction(PyObject* self, PyObject *args) {
+    long n;
+    PyObject* continued_fraction;
+    PyObject* decimal_part;
+
+    if (!PyArg_ParseTuple(args, "l", &n))
+        return NULL;
+
+    double square_root = sqrt(n);
+    long integer_part = (long)square_root;
+
+    continued_fraction = Py_BuildValue("(l,[])", integer_part);
+    decimal_part = PyTuple_GetItem(continued_fraction, 1); // Borrow.
+
+    /* Iteravely compute the decimal part of the continued fraction expansion. */
+    long m = 0;
+    long d = 1;
+    long a = integer_part;
+    do {
+        m = d*a - m;
+        d = (n - m*m) / d;
+        a = (long)( (square_root + m) / d );
+        PyList_Append(decimal_part, PyLong_FromLong(a));
+    } while(a != (2 * integer_part));
+
+    return continued_fraction;
+}
+
+/* Module setup and tables. */
+
 static PyMethodDef PycmathMethods[] = {
     {"primes", pycmath_primes, METH_VARARGS,
      "Compute a list of all the primes up to an integer n."},
+    {"continued_fraction", pycmath_coninued_fraction, METH_VARARGS,
+     "Compute the continued fraction expansion of a quadratic irrationality."},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
