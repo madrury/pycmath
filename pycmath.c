@@ -8,21 +8,58 @@ struct vector {
     long* data;
 };
 
-struct vector* make_primes_vector(long n) {
-    struct vector* v = malloc(sizeof(struct vector));
-    v->length = n;
-    v->data = malloc(sizeof(long) * n);
-    for(long i = 0; i < n; i++) {
-        v->data[i] = i;
-    }
-    return v;
-}
-
 void free_vector(struct vector* v) {
     free(v->data);
     free(v);
 }
 
+struct vector* new_vector(long n) {
+    struct vector* v = malloc(sizeof(struct vector));
+    v->length = n;
+    v->data = malloc(sizeof(long) * n);
+    return v;
+}
+
+
+
+/* Calculate the vector of primes <= n using the sieve of eristothonies */
+struct vector* make_primes_vector(long n) {
+
+    /* maybe_prime is a vector of booleans, tracking whether it is possible for
+       a given index to be a prime, update as we sieve.
+    */
+    struct vector* maybe_prime = new_vector(n);
+    for(long i = 0; i < maybe_prime->length; i++) {
+        maybe_prime->data[i] = 1;
+    }
+    maybe_prime->data[0] = 0;
+    maybe_prime->data[1] = 0;
+    
+    // We are overallocating here, but we will fix it soon.
+    struct vector* primes = new_vector(n);
+    long primes_idx = 0;
+
+    /* Sieve. */
+    for(long i = 0; i < maybe_prime->length; i++) {
+        if(maybe_prime->data[i] != 0) {
+            primes->data[primes_idx] = i;
+            primes_idx++;
+            for(long j = i*i; j < maybe_prime->length; j = j + i) {
+                maybe_prime->data[j] = 0;
+            }
+        }
+    }
+
+    // Fix overallocation.
+    long n_primes_found = 0;
+    for(long i = 0; i < maybe_prime->length; i++) {
+        n_primes_found += maybe_prime->data[i];
+    }
+    primes->length = n_primes_found;
+
+    free_vector(maybe_prime);
+    return primes;
+}
 
 /* Python methods for module. */
 
