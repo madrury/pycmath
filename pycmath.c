@@ -22,8 +22,16 @@ struct vector* new_vector(long n) {
 }
 
 
-/* Calculate the vector of primes <= n using the sieve of eristothonies */
-struct vector* make_primes_vector(long n) {
+
+/*****************************************************************************
+ * Python methods for module.
+ *****************************************************************************/
+
+/* Calculate the list of primes <= n
+
+   Uses the sieve of Eratosthenes.
+*/
+static PyObject* _primes(long n) {
 
     /* maybe_prime is a vector of booleans, tracking whether it is possible for
        a given index to be a prime, updated as we sieve.
@@ -35,34 +43,21 @@ struct vector* make_primes_vector(long n) {
     maybe_prime->data[0] = 0;
     maybe_prime->data[1] = 0;
     
-    // We are overallocating here, but we will fix it soon.
-    struct vector* primes = new_vector(n);
-    long primes_idx = 0;
+    PyObject* primes = PyList_New(0);
 
     /* Sieve. */
     for(long i = 0; i < maybe_prime->length; i++) {
         if(maybe_prime->data[i] != 0) {
-            primes->data[primes_idx] = i;
-            primes_idx++;
+            PyList_Append(primes, PyLong_FromLong(i));
             for(long j = i*i; j < maybe_prime->length; j = j + i) {
                 maybe_prime->data[j] = 0;
             }
         }
     }
 
-    // Fix overallocation.
-    long n_primes_found = 0;
-    for(long i = 0; i < maybe_prime->length; i++) {
-        n_primes_found += maybe_prime->data[i];
-    }
-    primes->length = n_primes_found;
-
     free_vector(maybe_prime);
     return primes;
 }
-
-
-/* Python methods for module. */
 
 static PyObject* pycmath_primes(PyObject* self, PyObject *args) {
     const long n;              // Argument: we are calculating the primes <= n
@@ -71,15 +66,7 @@ static PyObject* pycmath_primes(PyObject* self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "l", &n))
         return NULL;
     
-    struct vector* primes_vector = make_primes_vector(n);
-
-    primes = PyList_New(0);
-    Py_INCREF(primes);
-    for(long i = 0; i < primes_vector->length; i++) {
-        PyList_Append(primes, PyLong_FromLong(primes_vector->data[i]));
-    }
-
-    free_vector(primes_vector);
+    primes = _primes(n);
     return primes;
 }
 
@@ -89,13 +76,9 @@ static PyObject* pycmath_primes(PyObject* self, PyObject *args) {
    the integer part of the result, and the list containing the coninued
    fraction decomposition of the number.
 */
-static PyObject* pycmath_coninued_fraction(PyObject* self, PyObject *args) {
-    long n;
+static PyObject* _coninued_fraction(long n) {
     PyObject* continued_fraction;
     PyObject* decimal_part;
-
-    if (!PyArg_ParseTuple(args, "l", &n))
-        return NULL;
 
     double square_root = sqrt(n);
     long integer_part = (long)square_root;
@@ -117,7 +100,21 @@ static PyObject* pycmath_coninued_fraction(PyObject* self, PyObject *args) {
     return continued_fraction;
 }
 
-/* Module setup and tables. */
+static PyObject* pycmath_coninued_fraction(PyObject* self, PyObject *args) {
+    long n;
+    PyObject* continued_fraction;
+
+    if (!PyArg_ParseTuple(args, "l", &n))
+        return NULL;
+
+    continued_fraction = _coninued_fraction(n);
+    return continued_fraction;
+}
+
+
+/*****************************************************************************
+ * Module setup and method tables.
+ *****************************************************************************/
 
 static PyMethodDef PycmathMethods[] = {
     {"primes", pycmath_primes, METH_VARARGS,
