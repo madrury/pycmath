@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <math.h>
+#include <stdbool.h>
 
 /* A simple vector datatype.
    Essentially a bounded array, with the length information attached.
@@ -36,26 +37,25 @@ static PyObject* _primes(long n) {
     /* maybe_prime is a vector of booleans, tracking whether it is possible for
        a given index to be a prime, updated as we sieve.
     */
-    struct vector* maybe_prime = new_vector(n);
-    for(long i = 0; i < maybe_prime->length; i++) {
-        maybe_prime->data[i] = 1;
+    long maybe_prime[n]; 
+    for(long i = 0; i < n; i++) {
+        maybe_prime[i] = 1;
     }
-    maybe_prime->data[0] = 0;
-    maybe_prime->data[1] = 0;
+    maybe_prime[0] = 0;
+    maybe_prime[1] = 0;
     
     PyObject* primes = PyList_New(0);
 
     /* Sieve. */
-    for(long i = 0; i < maybe_prime->length; i++) {
-        if(maybe_prime->data[i] != 0) {
+    for(long i = 0; i < n; i++) {
+        if(maybe_prime[i] != 0) {
             PyList_Append(primes, PyLong_FromLong(i));
-            for(long j = i*i; j < maybe_prime->length; j = j + i) {
-                maybe_prime->data[j] = 0;
+            for(long j = i*i; j < n; j = j + i) {
+                maybe_prime[j] = 0;
             }
         }
     }
 
-    free_vector(maybe_prime);
     return primes;
 }
 
